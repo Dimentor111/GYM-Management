@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitCenter Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f11;--bg2:#161619;--bg3:#1e1e22;--bg4:#27272c;
+  --border:#2c2c32;--border2:#3a3a42;
+  --text:#f0f0f3;--text2:#9898aa;--text3:#55556a;
+  --accent:#6c63ff;--accent2:#8b85ff;--accentbg:#191830;
+  --green:#3ecf8e;--greenbg:#0c2218;--greenborder:#1a3a28;
+  --red:#f87171;--redbg:#280e0e;--redborder:#3a1414;
+  --amber:#fbbf24;--amberbg:#261c06;--amberborder:#3a2a08;
+  --blue:#60a5fa;--bluebg:#0b1d2e;--blueborder:#0d2a42;
+  --r:10px;--r2:14px;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:14px}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* AUTH SCREEN */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center}
+.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:40px 36px;width:100%;max-width:400px}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.auth-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.auth-logo-name{font-size:20px;font-weight:700}
+.auth-logo-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.auth-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.auth-err{background:var(--redbg);border:1px solid var(--redborder);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.auth-btn{width:100%;padding:11px;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;margin-top:6px;font-family:inherit}
+.auth-btn:hover{background:var(--accent2)}
+.auth-link{font-size:12px;color:var(--text2);text-align:center;margin-top:14px;cursor:pointer}
+.auth-link span{color:var(--accent2)}.auth-link span:hover{text-decoration:underline}
+.auth-gym-badge{background:var(--accentbg);border:1px solid var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--accent2);display:none;align-items:center;gap:8px}
+
+/* SIDEBAR */
+.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.logo{padding:18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.logo-date{font-size:11px;color:var(--text2);margin-top:2px}
+nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-group{font-size:10px;font-weight:600;letter-spacing:1.2px;color:var(--text3);padding:14px 8px 5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .12s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accentbg);color:var(--accent2);font-weight:500}
+.nav-item .icon{width:16px;height:16px;flex-shrink:0;opacity:.8}
+.nav-item.active .icon{opacity:1}
+.sidebar-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.db-status{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.db-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.logout-btn{font-size:11px;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:5px}
+.logout-btn:hover{color:var(--red)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto}
+.page{padding:28px 32px;max-width:1140px;margin:0 auto;display:none}
+.page.active{display:block}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.page-sub{font-size:13px;color:var(--text2);margin-top:3px}
+.page-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .12s;font-family:inherit;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg4);color:var(--text)}
+.btn-success{background:var(--greenbg);color:var(--green);border:1px solid var(--greenborder)}.btn-success:hover{filter:brightness(1.1)}
+.btn-danger{background:var(--redbg);color:var(--red);border:1px solid var(--redborder)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
+.card-flush{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin-bottom:22px}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.stat-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:7px}
+.stat-value{font-size:26px;font-weight:700;letter-spacing:-0.5px;line-height:1}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:5px}
+.stat.g .stat-value{color:var(--green)}.stat.b .stat-value{color:var(--blue)}
+.stat.a .stat-value{color:var(--amber)}.stat.r .stat-value{color:var(--red)}.stat.p .stat-value{color:var(--accent2)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:500px}
+th{text-align:left;padding:8px 14px;font-size:10px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg3);color:var(--text)}
+.td-name{font-weight:600;color:var(--text)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.bg{background:var(--greenbg);color:var(--green);border:1px solid var(--greenborder)}
+.br{background:var(--redbg);color:var(--red);border:1px solid var(--redborder)}
+.ba{background:var(--amberbg);color:var(--amber);border:1px solid var(--amberborder)}
+.bb{background:var(--bluebg);color:var(--blue);border:1px solid var(--blueborder)}
+.bn{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.dg{background:var(--green)}.dr{background:var(--red)}.da{background:var(--amber)}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:28px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.modal-title{font-size:17px;font-weight:700}
+.xbtn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:22px;line-height:1;padding:2px 4px}.xbtn:hover{color:var(--text)}
+.modal-ft{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* FORM */
+.frow{display:grid;gap:12px;margin-bottom:14px}
+.frow.c2{grid-template-columns:1fr 1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:500;color:var(--text2)}
+input,select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;transition:border .12s;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+select option{background:var(--bg3)}
+input::placeholder{color:var(--text3)}
+.hint{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* FILTER BAR */
+.fbar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.chip{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .12s;user-select:none}
+.chip.active{background:var(--accentbg);color:var(--accent2);border-color:var(--accent)}
+.chip:hover:not(.active){color:var(--text)}
+
+/* MISC */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.sec-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;text-transform:uppercase;letter-spacing:.8px}
+.empty{text-align:center;padding:44px;color:var(--text3);font-size:13px}
+.report-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.report-row:last-child{border-bottom:none}
+.report-row .lbl{color:var(--text2)}.report-row .val{font-weight:600;color:var(--text)}
+.report-total{display:flex;justify-content:space-between;padding:14px 0 6px;font-size:15px;font-weight:700;border-top:2px solid var(--border2);margin-top:4px}
+.visit-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border)}
+.visit-row:last-child{border-bottom:none}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--accentbg);color:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;font-size:13px;z-index:400;color:var(--text);min-width:210px;display:none;align-items:center;gap:10px}
+.toast.show{display:flex;animation:sup .18s}
+@keyframes sup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.timestamp{font-size:11px;color:var(--text3);font-family:monospace}
+.member-pick{padding:10px 12px;cursor:pointer;border-radius:8px;border:1px solid var(--border);margin-bottom:7px;background:var(--bg3)}
+.member-pick:hover{border-color:var(--accent2)}
+.selected-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;display:none}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:90px;margin-top:14px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-fill{width:100%;border-radius:4px 4px 0 0;min-height:3px}
+.bar-lbl{font-size:9px;color:var(--text3)}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.income-highlight{background:var(--greenbg);border:1px solid var(--greenborder);border-radius:9px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ==================== LOADING ==================== -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <span>Loading database...</span>
+</div>
+
+<!-- ==================== AUTH SCREEN ==================== -->
+<div class="auth-screen" id="auth-screen" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">💪</div>
+      <div>
+        <div class="auth-logo-name" id="auth-gym-name-display">FitCenter</div>
+        <div class="auth-logo-sub">Management System</div>
+      </div>
+    </div>
+
+    <!-- SETUP PANEL -->
+    <div id="auth-setup">
+      <div class="auth-title">Create Your Gym Account</div>
+      <div class="auth-sub">Set up your gym name and a password to protect the system.</div>
+      <div class="auth-err" id="setup-err"></div>
+      <div class="fg" style="margin-bottom:12px">
+        <label>Gym Name *</label>
+        <input id="setup-gymname" placeholder="e.g. PowerGym Sofia" oninput="updateAuthLogoName()">
+      </div>
+      <div class="fg" style="margin-bottom:12px">
+        <label>Password *</label>
+        <input type="password" id="setup-pass" placeholder="Choose a strong password">
+      </div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>Confirm Password *</label>
+        <input type="password" id="setup-pass2" placeholder="Repeat password">
+      </div>
+      <button class="auth-btn" onclick="doSetup()">Create Account &amp; Enter</button>
+    </div>
+
+    <!-- LOGIN PANEL -->
+    <div id="auth-login" style="display:none">
+      <div class="auth-gym-badge" id="auth-gym-badge">
+        <span style="font-size:18px">💪</span>
+        <span id="auth-badge-name">FitCenter</span>
+      </div>
+      <div class="auth-title">Welcome Back</div>
+      <div class="auth-sub">Enter your password to access the system.</div>
+      <div class="auth-err" id="login-err"></div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="auth-btn" onclick="doLogin()">Enter System</button>
+      <div class="auth-link" onclick="showResetWarning()">Forgot password? <span>Reset account</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div class="app" id="app" style="display:none">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">💪</div>
+    <div>
+      <div class="logo-name" id="sidebar-gym-name">FitCenter</div>
+      <div class="logo-date" id="logo-date">—</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-group">Main</div>
+    <div class="nav-item active" onclick="nav('dashboard')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+    </div>
+    <div class="nav-item" onclick="nav('members')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Members
+    </div>
+    <div class="nav-item" onclick="nav('visits')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Visits
+    </div>
+    <div class="nav-group">Sales</div>
+    <div class="nav-item" onclick="nav('workouts')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>Single Workouts
+    </div>
+    <div class="nav-item" onclick="nav('products')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Products
+    </div>
+    <div class="nav-group">Reports</div>
+    <div class="nav-item" onclick="nav('rep-daily')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Daily Report
+    </div>
+    <div class="nav-item" onclick="nav('rep-monthly')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Monthly Report
+    </div>
+    <div class="nav-item" onclick="nav('rep-yearly')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Yearly Report
+    </div>
+    <div class="nav-group">Data</div>
+    <div class="nav-item" onclick="exportDB()">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Database
+    </div>
+    <div class="nav-item" onclick="document.getElementById('import-file').click()">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import Database
+    </div>
+    <input type="file" id="import-file" accept=".db" style="display:none" onchange="importDB(event)">
+  </nav>
+  <div class="sidebar-footer">
+    <div class="db-status"><div class="db-dot"></div><span id="db-status-text">Database ready</span></div>
+    <div class="logout-btn" onclick="doLogout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Lock / Log out
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="page-header">
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-subtitle">Today at a glance</div></div>
+    <div class="page-actions">
+      <button class="btn btn-success" onclick="openModal('modal-visit')">+ Log Visit</button>
+      <button class="btn btn-primary" onclick="openModal('modal-workout')">+ Single Workout</button>
+    </div>
+  </div>
+  <div class="stats-grid" id="dash-stats"></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="sec-title">Today's Visits <span id="vc-badge" class="badge bb">0</span></div>
+      <div id="dash-visits"></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">Expiring Within 7 Days <span class="badge ba">⚠</span></div>
+      <div id="dash-expiring"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBERS -->
+<div id="page-members" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Members</div><div class="page-sub">All membership cards</div></div>
+    <button class="btn btn-primary" onclick="openAddMemberModal()">+ New Member</button>
+  </div>
+  <div class="fbar">
+    <input type="text" id="m-search" placeholder="Search name or phone…" style="width:230px" oninput="renderMembers()">
+    <div class="chip active" onclick="setChip(this,'mf','all');renderMembers()">All</div>
+    <div class="chip" onclick="setChip(this,'mf','active');renderMembers()">Active</div>
+    <div class="chip" onclick="setChip(this,'mf','expiring');renderMembers()">Expiring Soon</div>
+    <div class="chip" onclick="setChip(this,'mf','expired');renderMembers()">Expired</div>
+  </div>
+  <div class="card-flush">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Type</th><th>Registered</th><th>Start</th><th>End</th><th>Price Paid</th><th>Status</th><th></th></tr></thead>
+        <tbody id="members-tbody"></tbody>
+      </table>
+    </div>
+    <div id="members-empty" class="empty" style="display:none">No members found</div>
+  </div>
+</div>
+
+<!-- VISITS -->
+<div id="page-visits" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Visits</div><div class="page-sub">Full visit history</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-visit')">+ Record Visit</button>
+  </div>
+  <div class="fbar">
+    <input type="text" id="v-search" placeholder="Search name…" style="width:220px" oninput="renderVisits()">
+    <input type="date" id="v-date" onchange="renderVisits()" style="width:170px">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('v-date').value='';renderVisits()">Clear</button>
+  </div>
+  <div class="card-flush">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Customer</th><th>Card Status at Visit</th></tr></thead>
+        <tbody id="visits-tbody"></tbody>
+      </table>
+    </div>
+    <div id="visits-empty" class="empty" style="display:none">No visits recorded</div>
+  </div>
+</div>
+
+<!-- SINGLE WORKOUTS -->
+<div id="page-workouts" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Single Workouts</div><div class="page-sub">One-time entry sales · Standard €3.50</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-workout')">+ New Sale</button>
+  </div>
+  <div class="stats-grid" id="wo-stats" style="grid-template-columns:repeat(3,1fr)"></div>
+  <div class="card-flush">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Customer</th><th>Phone</th><th>Price</th><th>Payment</th></tr></thead>
+        <tbody id="wo-tbody"></tbody>
+      </table>
+    </div>
+    <div id="wo-empty" class="empty" style="display:none">No single workout sales yet</div>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<div id="page-products" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Products</div><div class="page-sub">Water, supplements & more</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-product')">+ New Sale</button>
+  </div>
+  <div class="stats-grid" id="pr-stats" style="grid-template-columns:repeat(4,1fr)"></div>
+  <div class="card-flush">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody id="pr-tbody"></tbody>
+      </table>
+    </div>
+    <div id="pr-empty" class="empty" style="display:none">No product sales yet</div>
+  </div>
+</div>
+
+<!-- DAILY REPORT -->
+<div id="page-rep-daily" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Daily Report</div><div class="page-sub">Full day breakdown</div></div>
+    <input type="date" id="dr-date" onchange="renderDailyReport()" style="width:170px">
+  </div>
+  <div id="dr-content"></div>
+</div>
+
+<!-- MONTHLY REPORT -->
+<div id="page-rep-monthly" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Monthly Report</div><div class="page-sub">Month performance overview</div></div>
+    <div style="display:flex;gap:8px">
+      <select id="mr-month" onchange="renderMonthlyReport()" style="width:140px">
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+      <input type="number" id="mr-year" onchange="renderMonthlyReport()" style="width:90px" min="2020" max="2099">
+    </div>
+  </div>
+  <div id="mr-content"></div>
+</div>
+
+<!-- YEARLY REPORT -->
+<div id="page-rep-yearly" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Yearly Report</div><div class="page-sub">Annual business summary</div></div>
+    <input type="number" id="yr-year" onchange="renderYearlyReport()" style="width:100px" min="2020" max="2099">
+  </div>
+  <div id="yr-content"></div>
+</div>
+
+</main>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Member Modal -->
+<div class="overlay" id="modal-member" onclick="overlayClick(event,'modal-member')">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-hd"><div class="modal-title" id="mem-modal-title">New Member</div><button class="xbtn" onclick="closeModal('modal-member')">×</button></div>
+  <div class="frow c2">
+    <div class="fg"><label>Full Name *</label><input id="mm-name" placeholder="First and last name"></div>
+    <div class="fg"><label>Phone Number</label><input id="mm-phone" placeholder="e.g. 0888 123 456"></div>
+  </div>
+  <div class="frow c2" style="margin-top:0">
+    <div class="fg">
+      <label>Membership Type *</label>
+      <select id="mm-type" onchange="onMemberType()">
+        <option value="monthly_student">Monthly – Student (€32)</option>
+        <option value="monthly_regular">Monthly – Regular (€38)</option>
+        <option value="two_weeks">Two Weeks (€25)</option>
+        <option value="weekly">Weekly Card</option>
+        <option value="three_months">3 Months (€110)</option>
+        <option value="custom">Custom Period</option>
+      </select>
+    </div>
+    <div class="fg"><label>Price Paid (€)</label><input type="number" id="mm-price" step="0.50" min="0" placeholder="Auto-filled" oninput="updateMemberIncomeLine()"></div>
+  </div>
+  <div class="frow c2" style="margin-top:0">
+    <div class="fg"><label>Start Date *</label><input type="date" id="mm-start" onchange="calcEnd()"></div>
+    <div class="fg"><label>End Date *</label><input type="date" id="mm-end"></div>
+  </div>
+  <div id="mm-income-line" class="income-highlight" style="display:none">
+    <span style="color:var(--text2)">💳 Income to be recorded today</span>
+    <span id="mm-income-amount" style="font-weight:700;color:var(--green)">€0.00</span>
+  </div>
+  <div id="mm-hint" class="hint"></div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeModal('modal-member')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveMember()">Save &amp; Record Income</button>
+  </div>
+</div>
+</div>
+
+<!-- Visit Modal -->
+<div class="overlay" id="modal-visit" onclick="overlayClick(event,'modal-visit')">
+<div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
+  <div class="modal-hd"><div class="modal-title">Record Visit</div><button class="xbtn" onclick="closeModal('modal-visit')">×</button></div>
+  <div class="fg" style="margin-bottom:12px">
+    <label>Search Member *</label>
+    <input id="vi-search" placeholder="Type name or phone…" oninput="searchMembersForVisit()">
+  </div>
+  <div id="vi-results"></div>
+  <div class="selected-card" id="vi-selected-card"><div id="vi-selected-info"></div></div>
+  <div class="hint" style="margin-bottom:4px">Leave blank or type a guest name if no membership card</div>
+  <div class="fg"><label>Guest Name (if not a member)</label><input id="vi-guest" placeholder="Optional guest name"></div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeModal('modal-visit')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveVisit()">Record Visit</button>
+  </div>
+</div>
+</div>
+
+<!-- Workout Modal -->
+<div class="overlay" id="modal-workout" onclick="overlayClick(event,'modal-workout')">
+<div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
+  <div class="modal-hd"><div class="modal-title">New Single Workout Sale</div><button class="xbtn" onclick="closeModal('modal-workout')">×</button></div>
+  <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text2)">
+    Standard price: <strong style="color:var(--green)">€3.50</strong> · Recorded at <strong id="wo-time-preview" style="color:var(--text)">—</strong>
+  </div>
+  <div class="frow c2">
+    <div class="fg"><label>Price (€) *</label><input type="number" id="wo-price" value="3.50" step="0.50" min="0"></div>
+    <div class="fg"><label>Payment</label><select id="wo-pay"><option value="cash">Cash</option><option value="card">Card</option></select></div>
+  </div>
+  <div class="fg" style="margin-top:6px"><label>Customer Name (optional)</label><input id="wo-name" placeholder="Guest or name"></div>
+  <div class="fg" style="margin-top:10px"><label>Phone (optional)</label><input id="wo-phone" placeholder="Optional"></div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeModal('modal-workout')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveWorkout()">Save Sale</button>
+  </div>
+</div>
+</div>
+
+<!-- Product Modal -->
+<div class="overlay" id="modal-product" onclick="overlayClick(event,'modal-product')">
+<div class="modal" style="max-width:460px" onclick="event.stopPropagation()">
+  <div class="modal-hd"><div class="modal-title">New Product Sale</div><button class="xbtn" onclick="closeModal('modal-product')">×</button></div>
+  <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--text2)">
+    Recorded at <strong id="pr-time-preview" style="color:var(--text)">—</strong>
+  </div>
+  <div class="fg" style="margin-bottom:14px">
+    <label>Product *</label>
+    <select id="pr-product" onchange="onProduct()">
+      <optgroup label="Water"><option value="water">Water Bottle – €1.00</option></optgroup>
+      <optgroup label="Supplements">
+        <option value="protein">Protein – €2.00</option>
+        <option value="preworkout">Pre-Workout – €1.50</option>
+        <option value="amino">Amino – €1.50</option>
+      </optgroup>
+      <optgroup label="Other">
+        <option value="protein_bar">Protein Bar – €2.50</option>
+        <option value="other">Other (custom)</option>
+      </optgroup>
+    </select>
+  </div>
+  <div id="pr-custom-name" class="fg" style="display:none;margin-bottom:14px"><label>Product Name</label><input id="pr-othername" placeholder="Enter product name"></div>
+  <div class="frow c2">
+    <div class="fg"><label>Quantity *</label><input type="number" id="pr-qty" value="1" min="1" oninput="calcTotal()"></div>
+    <div class="fg"><label>Unit Price (€) *</label><input type="number" id="pr-price" value="1.00" step="0.50" min="0" oninput="calcTotal()"></div>
+  </div>
+  <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;margin-top:2px;display:flex;justify-content:space-between;align-items:center">
+    <span style="color:var(--text2);font-size:13px">Total</span>
+    <span id="pr-total" style="font-size:17px;font-weight:700;color:var(--green)">€1.00</span>
+  </div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeModal('modal-product')">Cancel</button>
+    <button class="btn btn-primary" onclick="saveProduct()">Save Sale</button>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+// ================================================================
+//  ACCOUNT (localStorage, not DB — protects login before DB loads)
+// ================================================================
+const ACCT_KEY = 'fitcenter_account';
+
+function getAccount() {
+  try { return JSON.parse(localStorage.getItem(ACCT_KEY)); } catch(e){ return null; }
+}
+function saveAccount(gymName, passHash) {
+  localStorage.setItem(ACCT_KEY, JSON.stringify({gymName, passHash}));
+}
+function hashPass(s) {
+  // simple deterministic hash (not crypto, but sufficient for local app)
+  let h = 0;
+  for (let i=0; i<s.length; i++) h = (Math.imul(31,h) + s.charCodeAt(i)) | 0;
+  return 'h' + Math.abs(h).toString(36) + s.length.toString(36);
+}
+
+// ================================================================
+//  SESSION
+// ================================================================
+const SESSION_KEY = 'fitcenter_session';
+function isLoggedIn() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
+function setLoggedIn() { sessionStorage.setItem(SESSION_KEY,'1'); }
+function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
+
+// ================================================================
+//  AUTH UI
+// ================================================================
+function updateAuthLogoName() {
+  const v = document.getElementById('setup-gymname').value.trim() || 'FitCenter';
+  document.getElementById('auth-gym-name-display').textContent = v;
+}
+function showResetWarning() {
+  if (confirm('WARNING: Resetting will delete your gym account settings.\nYour database data will NOT be deleted.\n\nContinue?')) {
+    localStorage.removeItem(ACCT_KEY);
+    clearSession();
+    location.reload();
+  }
+}
+function doSetup() {
+  const gymName = document.getElementById('setup-gymname').value.trim();
+  const pass    = document.getElementById('setup-pass').value;
+  const pass2   = document.getElementById('setup-pass2').value;
+  const err     = document.getElementById('setup-err');
+  err.style.display='none';
+  if (!gymName) { err.textContent='Please enter your gym name.'; err.style.display='block'; return; }
+  if (pass.length < 4) { err.textContent='Password must be at least 4 characters.'; err.style.display='block'; return; }
+  if (pass !== pass2) { err.textContent='Passwords do not match.'; err.style.display='block'; return; }
+  saveAccount(gymName, hashPass(pass));
+  setLoggedIn();
+  launchApp();
+}
+function doLogin() {
+  const pass = document.getElementById('login-pass').value;
+  const acct = getAccount();
+  const err  = document.getElementById('login-err');
+  err.style.display='none';
+  if (!acct) { location.reload(); return; }
+  if (hashPass(pass) !== acct.passHash) {
+    err.textContent='Incorrect password. Please try again.';
+    err.style.display='block';
+    document.getElementById('login-pass').value='';
+    document.getElementById('login-pass').focus();
+    return;
+  }
+  setLoggedIn();
+  launchApp();
+}
+function doLogout() {
+  if (!confirm('Lock the system?')) return;
+  clearSession();
+  location.reload();
+}
+
+// ================================================================
+//  DATABASE
+// ================================================================
+const DB_KEY = 'fitcenter_db_v1';
+let DB = null, SQL = null;
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  type TEXT NOT NULL,
+  start_date TEXT NOT NULL,
+  end_date TEXT NOT NULL,
+  price REAL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  created_date TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS membership_sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id INTEGER NOT NULL,
+  member_name TEXT NOT NULL,
+  membership_type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  sale_date TEXT NOT NULL,
+  sale_time TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS visits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id INTEGER,
+  name TEXT NOT NULL,
+  member_status TEXT NOT NULL,
+  visit_date TEXT NOT NULL,
+  visit_time TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS workouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_name TEXT,
+  phone TEXT,
+  price REAL NOT NULL,
+  payment TEXT NOT NULL,
+  sale_date TEXT NOT NULL,
+  sale_time TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_key TEXT NOT NULL,
+  product_name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  qty INTEGER NOT NULL,
+  unit_price REAL NOT NULL,
+  total REAL NOT NULL,
+  sale_date TEXT NOT NULL,
+  sale_time TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
+function saveDB() {
+  try {
+    const data = DB.export();
+    // chunked btoa for large DBs
+    let b64 = '';
+    const chunk = 8192;
+    for (let i=0; i<data.length; i+=chunk) {
+      b64 += btoa(String.fromCharCode(...data.subarray(i,i+chunk)));
+    }
+    localStorage.setItem(DB_KEY, b64);
+    document.getElementById('db-status-text').textContent = 'Saved ' + nowTime();
+  } catch(e) { console.warn('saveDB error',e); }
+}
+function loadDB() {
+  const saved = localStorage.getItem(DB_KEY);
+  if (saved) {
+    try {
+      const bin = atob(saved);
+      const bytes = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      DB = new SQL.Database(bytes);
+    } catch(e) { DB = new SQL.Database(); }
+  } else {
+    DB = new SQL.Database();
+  }
+  DB.run(SCHEMA);
+  saveDB();
+}
+function q(sql, params=[]) {
+  const res = DB.exec(sql, params);
+  if (!res.length) return [];
+  const {columns, values} = res[0];
+  return values.map(row => Object.fromEntries(columns.map((c,i)=>[c,row[i]])));
+}
+function run(sql, params=[]) { DB.run(sql, params); saveDB(); }
+
+// ================================================================
+//  TIME HELPERS
+// ================================================================
+function nowISO()  { return new Date().toISOString(); }
+function nowDate() { return new Date().toISOString().slice(0,10); }
+function nowTime() { return new Date().toTimeString().slice(0,5); }
+function nowDatetime() {
+  const d=new Date();
+  return d.toISOString().slice(0,10)+' '+d.toTimeString().slice(0,5);
+}
+function fmtDate(s){ if(!s)return'—'; const[y,m,d]=s.slice(0,10).split('-'); return`${d}.${m}.${y}`; }
+function fmtCur(n){ return '€'+Number(n).toFixed(2); }
+function fmtDT(s){
+  if(!s)return'—';
+  const dt=s.includes('T')?new Date(s):new Date(s.replace(' ','T'));
+  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toTimeString().slice(0,5);
+}
+
+// ================================================================
+//  CONFIG
+// ================================================================
+const MTYPES = {
+  monthly_student:{label:'Monthly – Student',price:32,days:30},
+  monthly_regular:{label:'Monthly – Regular',price:38,days:30},
+  two_weeks:      {label:'Two Weeks',         price:25,days:14},
+  weekly:         {label:'Weekly Card',        price:null,days:7},
+  three_months:   {label:'3 Months',           price:110,days:92},
+  custom:         {label:'Custom',             price:null,days:null},
+};
+const PRODUCTS = {
+  water:      {name:'Water Bottle', price:1.00,category:'water'},
+  protein:    {name:'Protein',      price:2.00,category:'supplement'},
+  preworkout: {name:'Pre-Workout',  price:1.50,category:'supplement'},
+  amino:      {name:'Amino',        price:1.50,category:'supplement'},
+  protein_bar:{name:'Protein Bar',  price:2.50,category:'other'},
+  other:      {name:'Other',        price:1.00,category:'other'},
+};
+
+// ================================================================
+//  STATUS
+// ================================================================
+function cardStatus(sd,ed){
+  const t=nowDate(),e=ed;
+  if(!e||t>e)return'expired';
+  const days=(new Date(e)-new Date(t))/86400000;
+  return days<=7?'expiring':'active';
+}
+function statusBadge(s){
+  if(s==='active')  return`<span class="badge bg"><span class="dot dg"></span>Active</span>`;
+  if(s==='expired') return`<span class="badge br"><span class="dot dr"></span>Expired</span>`;
+  return`<span class="badge ba"><span class="dot da"></span>Expiring Soon</span>`;
+}
+
+// ================================================================
+//  NAVIGATION
+// ================================================================
+let curPage='dashboard';
+const pageFns={
+  dashboard:renderDashboard, members:renderMembers, visits:renderVisits,
+  workouts:renderWorkouts, products:renderProducts,
+  'rep-daily':renderDailyReport, 'rep-monthly':initMonthlyReport, 'rep-yearly':initYearlyReport,
+};
+function nav(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    if((el.getAttribute('onclick')||'').includes("'"+p+"'"))el.classList.add('active');
+  });
+  curPage=p;
+  if(pageFns[p])pageFns[p]();
+}
+
+// ================================================================
+//  TOAST
+// ================================================================
+let tTimer;
+function toast(msg,color='var(--green)'){
+  document.getElementById('tdot').style.background=color;
+  document.getElementById('tmsg').textContent=msg;
+  const t=document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(tTimer);
+  tTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ================================================================
+//  MODAL
+// ================================================================
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='modal-workout') document.getElementById('wo-time-preview').textContent=nowDatetime();
+  if(id==='modal-product') document.getElementById('pr-time-preview').textContent=nowDatetime();
+  if(id==='modal-visit'){
+    document.getElementById('vi-search').value='';
+    document.getElementById('vi-results').innerHTML='';
+    document.getElementById('vi-selected-card').style.display='none';
+    document.getElementById('vi-guest').value='';
+    selMember=null;
+  }
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function overlayClick(e,id){ if(e.target===document.getElementById(id))closeModal(id); }
+
+// ================================================================
+//  CHIP FILTER
+// ================================================================
+const chipFilters={};
+function setChip(el,group,val){
+  chipFilters[group]=val;
+  el.closest('.fbar').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ================================================================
+//  MEMBERS
+// ================================================================
+let editMemberId=null;
+function onMemberType(){
+  const t=document.getElementById('mm-type').value;
+  const mt=MTYPES[t];
+  if(mt?.price){
+    document.getElementById('mm-price').value=mt.price;
+    document.getElementById('mm-hint').textContent=`Standard price: €${mt.price}`;
+  } else {
+    document.getElementById('mm-price').value='';
+    document.getElementById('mm-hint').textContent='Enter price manually';
+  }
+  calcEnd();
+  updateMemberIncomeLine();
+}
+function updateMemberIncomeLine(){
+  const price=parseFloat(document.getElementById('mm-price').value)||0;
+  const line=document.getElementById('mm-income-line');
+  if(price>0){
+    line.style.display='flex';
+    document.getElementById('mm-income-amount').textContent=fmtCur(price);
+  } else {
+    line.style.display='none';
+  }
+}
+function calcEnd(){
+  const s=document.getElementById('mm-start').value;
+  if(!s)return;
+  const t=document.getElementById('mm-type').value;
+  const days=MTYPES[t]?.days;
+  if(!days)return;
+  const d=new Date(s); d.setDate(d.getDate()+days);
+  document.getElementById('mm-end').value=d.toISOString().slice(0,10);
+}
+function openAddMemberModal(){
+  editMemberId=null;
+  document.getElementById('mem-modal-title').textContent='New Member';
+  document.getElementById('mm-name').value='';
+  document.getElementById('mm-phone').value='';
+  document.getElementById('mm-type').value='monthly_regular';
+  document.getElementById('mm-start').value=nowDate();
+  document.getElementById('mm-price').value='';
+  document.getElementById('mm-hint').textContent='';
+  document.getElementById('mm-income-line').style.display='none';
+  onMemberType();
+  openModal('modal-member');
+}
+function saveMember(){
+  const name  = document.getElementById('mm-name').value.trim();
+  const phone = document.getElementById('mm-phone').value.trim();
+  const type  = document.getElementById('mm-type').value;
+  const start = document.getElementById('mm-start').value;
+  const end   = document.getElementById('mm-end').value;
+  const price = parseFloat(document.getElementById('mm-price').value)||0;
+  if(!name||!start||!end){ toast('Fill required fields','var(--red)'); return; }
+  const now=nowISO(), today=nowDate(), time=nowTime();
+
+  if(editMemberId){
+    run(`UPDATE members SET name=?,phone=?,type=?,start_date=?,end_date=?,price=? WHERE id=?`,
+        [name,phone,type,start,end,price,editMemberId]);
+    toast('Member updated ✓');
+  } else {
+    run(`INSERT INTO members(name,phone,type,start_date,end_date,price,created_at,created_date) VALUES(?,?,?,?,?,?,?,?)`,
+        [name,phone,type,start,end,price,now,today]);
+    // *** Record membership as income in membership_sales ***
+    if(price>0){
+      const newId = q(`SELECT last_insert_rowid() as id`)[0]?.id;
+      run(`INSERT INTO membership_sales(member_id,member_name,membership_type,amount,sale_date,sale_time,created_at) VALUES(?,?,?,?,?,?,?)`,
+          [newId||0, name, MTYPES[type]?.label||type, price, today, time, now]);
+    }
+    toast(`Member added · ${price>0?fmtCur(price)+' income recorded':'no price recorded'}`);
+  }
+  closeModal('modal-member');
+  if(curPage==='members')renderMembers();
+  if(curPage==='dashboard')renderDashboard();
+}
+function editMember(id){
+  const m=q(`SELECT * FROM members WHERE id=?`,[id])[0];
+  if(!m)return;
+  editMemberId=id;
+  document.getElementById('mem-modal-title').textContent='Edit Member';
+  document.getElementById('mm-name').value=m.name;
+  document.getElementById('mm-phone').value=m.phone||'';
+  document.getElementById('mm-type').value=m.type;
+  document.getElementById('mm-start').value=m.start_date;
+  document.getElementById('mm-end').value=m.end_date;
+  document.getElementById('mm-price').value=m.price||'';
+  document.getElementById('mm-hint').textContent='Editing will not change recorded income';
+  document.getElementById('mm-income-line').style.display='none';
+  openModal('modal-member');
+}
+function deleteMember(id){
+  if(!confirm('Delete this member?'))return;
+  run(`DELETE FROM members WHERE id=?`,[id]);
+  renderMembers();
+  toast('Member deleted','var(--red)');
+}
+function renderMembers(){
+  const search=(document.getElementById('m-search')?.value||'').toLowerCase();
+  const flt=chipFilters['mf']||'all';
+  let rows=q(`SELECT * FROM members ORDER BY created_at DESC`);
+  if(search)rows=rows.filter(m=>(m.name||'').toLowerCase().includes(search)||(m.phone||'').includes(search));
+  if(flt==='active')   rows=rows.filter(m=>cardStatus(m.start_date,m.end_date)==='active');
+  if(flt==='expiring') rows=rows.filter(m=>cardStatus(m.start_date,m.end_date)==='expiring');
+  if(flt==='expired')  rows=rows.filter(m=>cardStatus(m.start_date,m.end_date)==='expired');
+  const tbody=document.getElementById('members-tbody');
+  const empty=document.getElementById('members-empty');
+  if(!rows.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=rows.map(m=>{
+    const st=cardStatus(m.start_date,m.end_date);
+    return`<tr>
+      <td class="td-name">${m.name}</td>
+      <td>${m.phone||'—'}</td>
+      <td>${MTYPES[m.type]?.label||m.type}</td>
+      <td class="timestamp">${fmtDT(m.created_at)}</td>
+      <td>${fmtDate(m.start_date)}</td>
+      <td>${fmtDate(m.end_date)}</td>
+      <td style="color:var(--green)">${m.price?fmtCur(m.price):'—'}</td>
+      <td>${statusBadge(st)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="editMember(${m.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteMember(${m.id})">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ================================================================
+//  VISITS
+// ================================================================
+let selMember=null;
+function searchMembersForVisit(){
+  const q2=(document.getElementById('vi-search').value||'').toLowerCase();
+  selMember=null;
+  document.getElementById('vi-selected-card').style.display='none';
+  if(q2.length<2){ document.getElementById('vi-results').innerHTML=''; return; }
+  const found=q(`SELECT * FROM members WHERE lower(name) LIKE ? OR phone LIKE ? LIMIT 6`,['%'+q2+'%','%'+q2+'%']);
+  if(!found.length){
+    document.getElementById('vi-results').innerHTML=`<div style="font-size:12px;color:var(--text3);padding:6px 0">No members found — record as guest</div>`;
+    return;
+  }
+  document.getElementById('vi-results').innerHTML=found.map(m=>{
+    const st=cardStatus(m.start_date,m.end_date);
+    return`<div class="member-pick" onclick="pickMember(${m.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600;font-size:13px">${m.name}</span>${statusBadge(st)}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:3px">${MTYPES[m.type]?.label} · ${fmtDate(m.start_date)} – ${fmtDate(m.end_date)} · ${m.phone||'No phone'}</div>
+    </div>`;
+  }).join('');
+}
+function pickMember(id){
+  selMember=q(`SELECT * FROM members WHERE id=?`,[id])[0];
+  document.getElementById('vi-results').innerHTML='';
+  document.getElementById('vi-search').value=selMember.name;
+  const st=cardStatus(selMember.start_date,selMember.end_date);
+  document.getElementById('vi-selected-info').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:13px">${selMember.name}</span>${statusBadge(st)}
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:3px">${MTYPES[selMember.type]?.label||selMember.type} · ${fmtDate(selMember.start_date)} – ${fmtDate(selMember.end_date)}</div>
+  `;
+  document.getElementById('vi-selected-card').style.display='block';
+}
+function saveVisit(){
+  let name,memberId=null,status='guest';
+  if(selMember){
+    name=selMember.name; memberId=selMember.id;
+    status=cardStatus(selMember.start_date,selMember.end_date);
+  } else {
+    name=document.getElementById('vi-guest').value.trim();
+    if(!name){ toast('Enter a name or select a member','var(--red)'); return; }
+  }
+  run(`INSERT INTO visits(member_id,name,member_status,visit_date,visit_time,created_at) VALUES(?,?,?,?,?,?)`,
+      [memberId,name,status,nowDate(),nowTime(),nowISO()]);
+  closeModal('modal-visit');
+  toast(`Visit recorded for ${name}`);
+  if(curPage==='visits')renderVisits();
+  if(curPage==='dashboard')renderDashboard();
+}
+function renderVisits(){
+  const search=(document.getElementById('v-search')?.value||'').toLowerCase();
+  const dateF=document.getElementById('v-date')?.value||'';
+  let rows=q(`SELECT * FROM visits ORDER BY created_at DESC`);
+  if(search)rows=rows.filter(v=>(v.name||'').toLowerCase().includes(search));
+  if(dateF)rows=rows.filter(v=>v.visit_date===dateF);
+  const tbody=document.getElementById('visits-tbody');
+  const empty=document.getElementById('visits-empty');
+  if(!rows.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const stLabel={active:'Active Member',expired:'Expired Card',expiring:'Expiring Soon',guest:'Guest'};
+  const stCls={active:'bg',expired:'br',expiring:'ba',guest:'bn'};
+  tbody.innerHTML=rows.map(v=>`<tr>
+    <td>${fmtDate(v.visit_date)}</td>
+    <td class="timestamp">${v.visit_time}</td>
+    <td class="td-name">${v.name}</td>
+    <td><span class="badge ${stCls[v.member_status]||'bn'}">${stLabel[v.member_status]||v.member_status}</span></td>
+  </tr>`).join('');
+}
+
+// ================================================================
+//  WORKOUTS
+// ================================================================
+function saveWorkout(){
+  const price=parseFloat(document.getElementById('wo-price').value)||0;
+  if(!price){ toast('Enter a price','var(--red)'); return; }
+  run(`INSERT INTO workouts(customer_name,phone,price,payment,sale_date,sale_time,created_at) VALUES(?,?,?,?,?,?,?)`,
+      [document.getElementById('wo-name').value.trim()||null,
+       document.getElementById('wo-phone').value.trim()||null,
+       price,document.getElementById('wo-pay').value,
+       nowDate(),nowTime(),nowISO()]);
+  document.getElementById('wo-name').value='';
+  document.getElementById('wo-phone').value='';
+  document.getElementById('wo-price').value='3.50';
+  closeModal('modal-workout');
+  toast('Workout sale saved ✓');
+  if(curPage==='workouts')renderWorkouts();
+  if(curPage==='dashboard')renderDashboard();
+}
+function renderWorkouts(){
+  const rows=q(`SELECT * FROM workouts ORDER BY created_at DESC`);
+  const today=q(`SELECT * FROM workouts WHERE sale_date=?`,[nowDate()]);
+  const todayInc=today.reduce((s,w)=>s+w.price,0);
+  document.getElementById('wo-stats').innerHTML=`
+    <div class="stat g"><div class="stat-label">Today Sales</div><div class="stat-value">${today.length}</div><div class="stat-sub">single workouts</div></div>
+    <div class="stat b"><div class="stat-label">Today Income</div><div class="stat-value" style="font-size:20px">${fmtCur(todayInc)}</div></div>
+    <div class="stat"><div class="stat-label">All Time Total</div><div class="stat-value">${rows.length}</div></div>
+  `;
+  const tbody=document.getElementById('wo-tbody');
+  const empty=document.getElementById('wo-empty');
+  if(!rows.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=rows.map(w=>`<tr>
+    <td>${fmtDate(w.sale_date)}</td><td class="timestamp">${w.sale_time}</td>
+    <td class="td-name">${w.customer_name||'<span style="color:var(--text3)">Guest</span>'}</td>
+    <td>${w.phone||'—'}</td>
+    <td style="color:var(--green);font-weight:600">${fmtCur(w.price)}</td>
+    <td><span class="badge ${w.payment==='cash'?'ba':'bb'}">${w.payment==='cash'?'Cash':'Card'}</span></td>
+  </tr>`).join('');
+}
+
+// ================================================================
+//  PRODUCTS
+// ================================================================
+function onProduct(){
+  const key=document.getElementById('pr-product').value;
+  const p=PRODUCTS[key];
+  document.getElementById('pr-price').value=p?p.price:1.00;
+  document.getElementById('pr-qty').value=1;
+  document.getElementById('pr-custom-name').style.display=key==='other'?'block':'none';
+  calcTotal();
+}
+function calcTotal(){
+  const qty=parseInt(document.getElementById('pr-qty').value)||1;
+  const price=parseFloat(document.getElementById('pr-price').value)||0;
+  document.getElementById('pr-total').textContent=fmtCur(qty*price);
+}
+function saveProduct(){
+  const key=document.getElementById('pr-product').value;
+  const cat=PRODUCTS[key];
+  const name=key==='other'?(document.getElementById('pr-othername').value.trim()||'Other'):cat.name;
+  const qty=parseInt(document.getElementById('pr-qty').value)||1;
+  const price=parseFloat(document.getElementById('pr-price').value)||0;
+  if(!price){ toast('Enter a price','var(--red)'); return; }
+  run(`INSERT INTO products(product_key,product_name,category,qty,unit_price,total,sale_date,sale_time,created_at) VALUES(?,?,?,?,?,?,?,?,?)`,
+      [key,name,cat?.category||'other',qty,price,qty*price,nowDate(),nowTime(),nowISO()]);
+  closeModal('modal-product');
+  toast('Product sale saved ✓');
+  if(curPage==='products')renderProducts();
+  if(curPage==='dashboard')renderDashboard();
+}
+function renderProducts(){
+  const rows=q(`SELECT * FROM products ORDER BY created_at DESC`);
+  const today=q(`SELECT * FROM products WHERE sale_date=?`,[nowDate()]);
+  const water=today.filter(p=>p.product_key==='water');
+  const supps=today.filter(p=>p.category==='supplement');
+  const todayInc=today.reduce((s,p)=>s+p.total,0);
+  document.getElementById('pr-stats').innerHTML=`
+    <div class="stat b"><div class="stat-label">Water Today</div><div class="stat-value">${water.reduce((s,p)=>s+p.qty,0)}</div><div class="stat-sub">bottles</div></div>
+    <div class="stat p"><div class="stat-label">Supplements Today</div><div class="stat-value">${supps.reduce((s,p)=>s+p.qty,0)}</div><div class="stat-sub">doses</div></div>
+    <div class="stat g"><div class="stat-label">Today Income</div><div class="stat-value" style="font-size:20px">${fmtCur(todayInc)}</div></div>
+    <div class="stat"><div class="stat-label">All Time Sales</div><div class="stat-value">${rows.length}</div></div>
+  `;
+  const tbody=document.getElementById('pr-tbody');
+  const empty=document.getElementById('pr-empty');
+  if(!rows.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=rows.map(p=>`<tr>
+    <td>${fmtDate(p.sale_date)}</td><td class="timestamp">${p.sale_time}</td>
+    <td class="td-name">${p.product_name}</td>
+    <td>${p.qty}</td><td>${fmtCur(p.unit_price)}</td>
+    <td style="color:var(--green);font-weight:600">${fmtCur(p.total)}</td>
+  </tr>`).join('');
+}
+
+// ================================================================
+//  DASHBOARD
+// ================================================================
+function renderDashboard(){
+  const t=nowDate();
+  const visits   =q(`SELECT * FROM visits WHERE visit_date=?`,[t]);
+  const workouts =q(`SELECT * FROM workouts WHERE sale_date=?`,[t]);
+  const products =q(`SELECT * FROM products WHERE sale_date=?`,[t]);
+  const membSales=q(`SELECT * FROM membership_sales WHERE sale_date=?`,[t]);
+  const allM     =q(`SELECT * FROM members`);
+  const water    =products.filter(p=>p.product_key==='water');
+  const supps    =products.filter(p=>p.category==='supplement');
+  const wInc     =workouts.reduce((s,w)=>s+w.price,0);
+  const pInc     =products.reduce((s,p)=>s+p.total,0);
+  const mInc     =membSales.reduce((s,m)=>s+m.amount,0);
+  const total    =wInc+pInc+mInc;
+  const active   =allM.filter(m=>cardStatus(m.start_date,m.end_date)==='active').length;
+  const expired  =allM.filter(m=>cardStatus(m.start_date,m.end_date)==='expired').length;
+
+  document.getElementById('dash-subtitle').textContent=
+    'Today: '+new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat g"><div class="stat-label">Today's Income</div><div class="stat-value" style="font-size:20px">${fmtCur(total)}</div><div class="stat-sub">all sources</div></div>
+    <div class="stat b"><div class="stat-label">Visits Today</div><div class="stat-value">${visits.length}</div></div>
+    <div class="stat a"><div class="stat-label">Workouts Sold</div><div class="stat-value">${workouts.length}</div><div class="stat-sub">${fmtCur(wInc)}</div></div>
+    <div class="stat p"><div class="stat-label">Memberships Today</div><div class="stat-value">${membSales.length}</div><div class="stat-sub">${fmtCur(mInc)}</div></div>
+    <div class="stat"><div class="stat-label">Water Bottles</div><div class="stat-value">${water.reduce((s,p)=>s+p.qty,0)}</div></div>
+    <div class="stat p"><div class="stat-label">Supplements</div><div class="stat-value">${supps.reduce((s,p)=>s+p.qty,0)}</div></div>
+    <div class="stat g"><div class="stat-label">Active Members</div><div class="stat-value">${active}</div></div>
+    <div class="stat r"><div class="stat-label">Expired Cards</div><div class="stat-value">${expired}</div></div>
+  `;
+
+  const vl=document.getElementById('dash-visits');
+  document.getElementById('vc-badge').textContent=visits.length;
+  if(!visits.length){ vl.innerHTML='<div class="empty">No visits yet today</div>'; }
+  else vl.innerHTML=[...visits].reverse().slice(0,8).map(v=>{
+    const init=(v.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return`<div class="visit-row"><div class="avatar">${init}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${v.name}</div>
+      <div style="font-size:11px;color:var(--text2)">${v.visit_time}</div></div></div>`;
+  }).join('');
+
+  const expiring=allM.filter(m=>cardStatus(m.start_date,m.end_date)==='expiring');
+  const el=document.getElementById('dash-expiring');
+  if(!expiring.length){ el.innerHTML='<div class="empty">No cards expiring in 7 days</div>'; }
+  else el.innerHTML=expiring.map(m=>`<div class="visit-row">
+    <div style="flex:1"><div style="font-size:13px;font-weight:600">${m.name}</div>
+    <div style="font-size:11px;color:var(--text2)">Expires ${fmtDate(m.end_date)} · ${m.phone||'No phone'}</div></div>
+    <span class="badge ba">Soon</span>
+  </div>`).join('');
+}
+
+// ================================================================
+//  DAILY REPORT  (now includes membership income)
+// ================================================================
+function renderDailyReport(){
+  const d=document.getElementById('dr-date').value||nowDate();
+  document.getElementById('dr-date').value=d;
+
+  const workouts =q(`SELECT * FROM workouts WHERE sale_date=?`,[d]);
+  const products =q(`SELECT * FROM products WHERE sale_date=?`,[d]);
+  const visits   =q(`SELECT * FROM visits WHERE visit_date=?`,[d]);
+  const newM     =q(`SELECT * FROM members WHERE created_date=?`,[d]);
+  const membSales=q(`SELECT * FROM membership_sales WHERE sale_date=?`,[d]);
+
+  const water =products.filter(p=>p.product_key==='water');
+  const prot  =products.filter(p=>p.product_key==='protein');
+  const prewo =products.filter(p=>p.product_key==='preworkout');
+  const amino =products.filter(p=>p.product_key==='amino');
+  const supps =products.filter(p=>p.category==='supplement');
+  const other =products.filter(p=>p.category==='other');
+
+  const wInc   =workouts.reduce((s,w)=>s+w.price,0);
+  const wtrInc =water.reduce((s,p)=>s+p.total,0);
+  const suppInc=supps.reduce((s,p)=>s+p.total,0);
+  const othInc =other.reduce((s,p)=>s+p.total,0);
+  const mInc   =membSales.reduce((s,m)=>s+m.amount,0);
+  const total  =wInc+wtrInc+suppInc+othInc+mInc;
+  const sumQty =arr=>arr.reduce((s,p)=>s+p.qty,0);
+
+  document.getElementById('dr-content').innerHTML=`
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px">
+      <div class="stat g"><div class="stat-label">Total Income</div><div class="stat-value" style="font-size:18px">${fmtCur(total)}</div></div>
+      <div class="stat b"><div class="stat-label">Customer Visits</div><div class="stat-value">${visits.length}</div></div>
+      <div class="stat a"><div class="stat-label">Workouts Sold</div><div class="stat-value">${workouts.length}</div></div>
+      <div class="stat p"><div class="stat-label">New Members</div><div class="stat-value">${newM.length}</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="sec-title">Income Breakdown</div>
+        <div class="report-row"><span class="lbl">💳 Membership Sales (${membSales.length})</span><span class="val" style="color:var(--accent2)">${fmtCur(mInc)}</span></div>
+        <div class="report-row"><span class="lbl">Single Workouts (${workouts.length})</span><span class="val">${fmtCur(wInc)}</span></div>
+        <div class="report-row"><span class="lbl">Water Bottles (${sumQty(water)} units)</span><span class="val">${fmtCur(wtrInc)}</span></div>
+        <div class="report-row"><span class="lbl">Supplements (${sumQty(supps)} doses)</span><span class="val">${fmtCur(suppInc)}</span></div>
+        ${othInc>0?`<div class="report-row"><span class="lbl">Other Products</span><span class="val">${fmtCur(othInc)}</span></div>`:''}
+        <div class="report-total"><span>Total</span><span style="color:var(--green)">${fmtCur(total)}</span></div>
+      </div>
+      <div class="card">
+        <div class="sec-title">Activity Detail</div>
+        <div class="report-row"><span class="lbl">Customer Visits</span><span class="val">${visits.length}</span></div>
+        <div class="report-row"><span class="lbl">New Memberships Sold</span><span class="val">${membSales.length}</span></div>
+        <div class="report-row"><span class="lbl">Single Workouts</span><span class="val">${workouts.length}</span></div>
+        <div class="report-row"><span class="lbl">Water Bottles</span><span class="val">${sumQty(water)}</span></div>
+        <div class="report-row"><span class="lbl">· Protein doses</span><span class="val">${sumQty(prot)}</span></div>
+        <div class="report-row"><span class="lbl">· Pre-Workout doses</span><span class="val">${sumQty(prewo)}</span></div>
+        <div class="report-row"><span class="lbl">· Amino doses</span><span class="val">${sumQty(amino)}</span></div>
+        <div class="report-row"><span class="lbl">Cash / Card workouts</span><span class="val">${workouts.filter(w=>w.payment==='cash').length} / ${workouts.filter(w=>w.payment==='card').length}</span></div>
+      </div>
+    </div>
+    ${membSales.length?`
+    <div class="card" style="margin-top:16px">
+      <div class="sec-title">Membership Sales — ${fmtDate(d)}</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Time</th><th>Member</th><th>Type</th><th>Amount</th></tr></thead>
+        <tbody>${membSales.map(m=>`<tr>
+          <td class="timestamp">${m.sale_time}</td>
+          <td class="td-name">${m.member_name}</td>
+          <td>${m.membership_type}</td>
+          <td style="color:var(--green);font-weight:600">${fmtCur(m.amount)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:''}
+    ${workouts.length?`
+    <div class="card" style="margin-top:16px">
+      <div class="sec-title">Workout Sales — ${fmtDate(d)}</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Time</th><th>Customer</th><th>Price</th><th>Payment</th></tr></thead>
+        <tbody>${workouts.map(w=>`<tr>
+          <td class="timestamp">${w.sale_time}</td>
+          <td>${w.customer_name||'Guest'}</td>
+          <td style="color:var(--green)">${fmtCur(w.price)}</td>
+          <td><span class="badge ${w.payment==='cash'?'ba':'bb'}">${w.payment}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:''}
+  `;
+}
+
+// ================================================================
+//  MONTHLY REPORT  (now includes membership income)
+// ================================================================
+function initMonthlyReport(){
+  const n=new Date();
+  document.getElementById('mr-month').value=String(n.getMonth()+1).padStart(2,'0');
+  document.getElementById('mr-year').value=n.getFullYear();
+  renderMonthlyReport();
+}
+function renderMonthlyReport(){
+  const month =document.getElementById('mr-month').value;
+  const year  =document.getElementById('mr-year').value||new Date().getFullYear();
+  const prefix=`${year}-${month}`;
+
+  const workouts =q(`SELECT * FROM workouts WHERE sale_date LIKE ?`,[prefix+'%']);
+  const products =q(`SELECT * FROM products WHERE sale_date LIKE ?`,[prefix+'%']);
+  const visits   =q(`SELECT * FROM visits WHERE visit_date LIKE ?`,[prefix+'%']);
+  const newM     =q(`SELECT * FROM members WHERE created_date LIKE ?`,[prefix+'%']);
+  const membSales=q(`SELECT * FROM membership_sales WHERE sale_date LIKE ?`,[prefix+'%']);
+  const allM     =q(`SELECT * FROM members`);
+
+  const water =products.filter(p=>p.product_key==='water');
+  const supps =products.filter(p=>p.category==='supplement');
+  const active=allM.filter(m=>cardStatus(m.start_date,m.end_date)==='active').length;
+  const expired=allM.filter(m=>cardStatus(m.start_date,m.end_date)==='expired').length;
+
+  const wInc   =workouts.reduce((s,w)=>s+w.price,0);
+  const wtrInc =water.reduce((s,p)=>s+p.total,0);
+  const suppInc=supps.reduce((s,p)=>s+p.total,0);
+  const othInc =products.filter(p=>p.category==='other').reduce((s,p)=>s+p.total,0);
+  const mInc   =membSales.reduce((s,m)=>s+m.amount,0);
+  const total  =wInc+wtrInc+suppInc+othInc+mInc;
+
+  const mnames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mname=mnames[parseInt(month)-1];
+
+  document.getElementById('mr-content').innerHTML=`
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px">
+      <div class="stat g"><div class="stat-label">Monthly Income</div><div class="stat-value" style="font-size:18px">${fmtCur(total)}</div></div>
+      <div class="stat b"><div class="stat-label">Visits</div><div class="stat-value">${visits.length}</div></div>
+      <div class="stat a"><div class="stat-label">Workouts Sold</div><div class="stat-value">${workouts.length}</div></div>
+      <div class="stat p"><div class="stat-label">New Members</div><div class="stat-value">${newM.length}</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="sec-title">${mname} ${year} — Income</div>
+        <div class="report-row"><span class="lbl">💳 Membership Sales (${membSales.length})</span><span class="val" style="color:var(--accent2)">${fmtCur(mInc)}</span></div>
+        <div class="report-row"><span class="lbl">Single Workouts (${workouts.length})</span><span class="val">${fmtCur(wInc)}</span></div>
+        <div class="report-row"><span class="lbl">Water Bottles (${water.reduce((s,p)=>s+p.qty,0)})</span><span class="val">${fmtCur(wtrInc)}</span></div>
+        <div class="report-row"><span class="lbl">Supplements (${supps.reduce((s,p)=>s+p.qty,0)} doses)</span><span class="val">${fmtCur(suppInc)}</span></div>
+        <div class="report-row"><span class="lbl">Other Products</span><span class="val">${fmtCur(othInc)}</span></div>
+        <div class="report-total"><span>Total Income</span><span style="color:var(--green)">${fmtCur(total)}</span></div>
+      </div>
+      <div class="card">
+        <div class="sec-title">Membership Status</div>
+        <div class="report-row"><span class="lbl">New Cards This Month</span><span class="val">${newM.length}</span></div>
+        <div class="report-row"><span class="lbl">Currently Active</span><span class="val" style="color:var(--green)">${active}</span></div>
+        <div class="report-row"><span class="lbl">Expired Cards</span><span class="val" style="color:var(--red)">${expired}</span></div>
+        <div class="report-row"><span class="lbl">Total Members (all time)</span><span class="val">${allM.length}</span></div>
+        <div class="report-row"><span class="lbl">Customer Visits</span><span class="val">${visits.length}</span></div>
+        <div class="report-row"><span class="lbl">Products Sold (units)</span><span class="val">${products.reduce((s,p)=>s+p.qty,0)}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+// ================================================================
+//  YEARLY REPORT  (now includes membership income)
+// ================================================================
+function initYearlyReport(){
+  document.getElementById('yr-year').value=new Date().getFullYear();
+  renderYearlyReport();
+}
+function renderYearlyReport(){
+  const year=document.getElementById('yr-year').value||new Date().getFullYear();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const data=months.map((name,i)=>{
+    const prefix=`${year}-${String(i+1).padStart(2,'0')}`;
+    const ws=q(`SELECT * FROM workouts WHERE sale_date LIKE ?`,[prefix+'%']);
+    const ps=q(`SELECT * FROM products WHERE sale_date LIKE ?`,[prefix+'%']);
+    const ms=q(`SELECT * FROM membership_sales WHERE sale_date LIKE ?`,[prefix+'%']);
+    const wInc=ws.reduce((s,w)=>s+w.price,0);
+    const pInc=ps.reduce((s,p)=>s+p.total,0);
+    const mInc=ms.reduce((s,m)=>s+m.amount,0);
+    return{name,income:wInc+pInc+mInc,workouts:ws.length,products:ps.reduce((s,p)=>s+p.qty,0),memberships:ms.length};
+  });
+  const totalInc =data.reduce((s,m)=>s+m.income,0);
+  const totalWo  =data.reduce((s,m)=>s+m.workouts,0);
+  const totalProd=data.reduce((s,m)=>s+m.products,0);
+  const totalMemb=data.reduce((s,m)=>s+m.memberships,0);
+  const newM     =q(`SELECT COUNT(*) as c FROM members WHERE created_date LIKE ?`,[year+'%'])[0]?.c||0;
+  const maxInc   =Math.max(...data.map(m=>m.income),1);
+  const top      =data.reduce((a,b)=>a.income>b.income?a:b);
+
+  document.getElementById('yr-content').innerHTML=`
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+      <div class="stat g"><div class="stat-label">Total Income ${year}</div><div class="stat-value" style="font-size:18px">${fmtCur(totalInc)}</div></div>
+      <div class="stat p"><div class="stat-label">Memberships Sold</div><div class="stat-value">${totalMemb}</div></div>
+      <div class="stat b"><div class="stat-label">Workouts Sold</div><div class="stat-value">${totalWo}</div></div>
+      <div class="stat a"><div class="stat-label">Products Sold</div><div class="stat-value">${totalProd}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="sec-title">Monthly Income — ${year}${totalInc>0?` &nbsp;·&nbsp; Best: <span style="color:var(--green)">${top.name} (${fmtCur(top.income)})</span>`:''}</div>
+      <div class="bar-chart">
+        ${data.map(m=>{
+          const h=maxInc>0?Math.max(Math.round((m.income/maxInc)*78),m.income>0?5:2):2;
+          const isTop=m.name===top.name&&totalInc>0;
+          return`<div class="bar-col">
+            <div class="bar-fill" style="height:${h}px;background:${isTop?'var(--green)':'var(--accent)'};opacity:${isTop?1:.75}"></div>
+            <div class="bar-lbl">${m.name}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:14px">Month-by-Month Breakdown — ${year}</div>
+      ${data.filter(m=>m.income>0).map(m=>`
+        <div class="report-row">
+          <span class="lbl">${m.name} ${year}</span>
+          <span style="display:flex;align-items:center;gap:18px;font-size:13px">
+            <span style="color:var(--text3)">${m.memberships} cards · ${m.workouts} workouts · ${m.products} products</span>
+            <span class="val">${fmtCur(m.income)}</span>
+          </span>
+        </div>`).join('')}
+      ${totalInc===0?`<div class="empty">No income data for ${year}</div>`:''}
+      <div class="report-total"><span>Total ${year}</span><span style="color:var(--green)">${fmtCur(totalInc)}</span></div>
+    </div>
+  `;
+}
+
+// ================================================================
+//  EXPORT / IMPORT
+// ================================================================
+function exportDB(){
+  const data=DB.export();
+  const blob=new Blob([data],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`FitCenter_${nowDate()}.db`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Database exported ✓');
+}
+function importDB(event){
+  const file=event.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(!confirm('This will replace ALL current data. Continue?'))return;
+    const data=new Uint8Array(e.target.result);
+    DB=new SQL.Database(data); DB.run(SCHEMA); saveDB();
+    toast('Database imported ✓'); nav(curPage);
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value='';
+}
+
+// ================================================================
+//  LAUNCH APP
+// ================================================================
+function launchApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  const acct=getAccount();
+  const gymName=acct?.gymName||'FitCenter';
+  document.getElementById('sidebar-gym-name').textContent=gymName;
+  document.title=gymName+' Manager';
+  document.getElementById('logo-date').textContent=
+    new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('dr-date').value=nowDate();
+  renderDashboard();
+  setInterval(saveDB,60000);
+}
+
+// ================================================================
+//  INIT
+// ================================================================
+async function init(){
+  try {
+    SQL=await initSqlJs({
+      locateFile:file=>`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${file}`
+    });
+    loadDB();
+    document.getElementById('loading').style.display='none';
+
+    const acct=getAccount();
+
+    if(!acct){
+      // First time — show setup
+      document.getElementById('auth-screen').style.display='flex';
+      document.getElementById('auth-setup').style.display='block';
+      document.getElementById('auth-login').style.display='none';
+    } else if(isLoggedIn()){
+      // Already logged in this session
+      launchApp();
+    } else {
+      // Has account, needs login
+      document.getElementById('auth-screen').style.display='flex';
+      document.getElementById('auth-setup').style.display='none';
+      document.getElementById('auth-login').style.display='block';
+      document.getElementById('auth-gym-name-display').textContent=acct.gymName;
+      document.getElementById('auth-badge-name').textContent=acct.gymName;
+      document.getElementById('auth-gym-badge').style.display='flex';
+      setTimeout(()=>document.getElementById('login-pass').focus(),100);
+    }
+  } catch(err){
+    document.getElementById('loading').innerHTML=
+      `<div style="color:var(--red);text-align:center;padding:20px">Failed to load.<br><small>${err.message}</small></div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
