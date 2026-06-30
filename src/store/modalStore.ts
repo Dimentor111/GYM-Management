@@ -18,6 +18,7 @@ interface ModalState {
   staff: EditModal;
   restock: { open: boolean; productId: number | null };
   membership: { open: boolean; membershipId: number | null };
+  voidItem: { open: boolean; saleItemId: number | null };
 
   openClient: (editId?: number | null) => void;
   openClientProfile: (clientId: number) => void;
@@ -26,6 +27,7 @@ interface ModalState {
   openStaff: (editId?: number | null) => void;
   openRestock: (productId?: number | null) => void;
   openMembership: (membershipId: number) => void;
+  openVoidItem: (saleItemId: number) => void;
 
   closeClient: () => void;
   closeClientProfile: () => void;
@@ -34,6 +36,7 @@ interface ModalState {
   closeStaff: () => void;
   closeRestock: () => void;
   closeMembership: () => void;
+  closeVoidItem: () => void;
 }
 
 export const useModalStore = create<ModalState>((set) => ({
@@ -44,6 +47,7 @@ export const useModalStore = create<ModalState>((set) => ({
   staff: { open: false, editId: null },
   restock: { open: false, productId: null },
   membership: { open: false, membershipId: null },
+  voidItem: { open: false, saleItemId: null },
 
   openClient: (editId = null) => set({ client: { open: true, editId } }),
   openClientProfile: (clientId) => set({ clientProfile: { open: true, clientId } }),
@@ -52,6 +56,7 @@ export const useModalStore = create<ModalState>((set) => ({
   openStaff: (editId = null) => set({ staff: { open: true, editId } }),
   openRestock: (productId = null) => set({ restock: { open: true, productId } }),
   openMembership: (membershipId) => set({ membership: { open: true, membershipId } }),
+  openVoidItem: (saleItemId) => set({ voidItem: { open: true, saleItemId } }),
 
   closeClient: () => set({ client: { open: false, editId: null } }),
   closeClientProfile: () => set({ clientProfile: { open: false, clientId: null } }),
@@ -60,4 +65,5 @@ export const useModalStore = create<ModalState>((set) => ({
   closeStaff: () => set({ staff: { open: false, editId: null } }),
   closeRestock: () => set({ restock: { open: false, productId: null } }),
   closeMembership: () => set({ membership: { open: false, membershipId: null } }),
+  closeVoidItem: () => set({ voidItem: { open: false, saleItemId: null } }),
 }));

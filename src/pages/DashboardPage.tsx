@@ -2,11 +2,12 @@ import { useAppStore } from '../store/appStore';
 import { useModalStore } from '../store/modalStore';
 import { useQuery, useScalar, useFormatMoney } from '../store/useQuery';
 import { membershipStatus } from '../features/memberships/membershipUtils';
-import { groupItems } from '../features/reports/reportUtils';
+import { isActiveSaleItem } from '../features/reports/reportUtils';
 import { todayISO, formatDate } from '../utils/dates';
 import { firstLetter, initials } from '../utils/validation';
 import { StatCard } from '../components/common/StatCard';
 import { StatusBadge, Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/common/EmptyState';
 import { BarChart } from '../components/common/BarChart';
 import type { Membership, Product, Sale, SaleItem, Visit } from '../types';
@@ -25,6 +26,7 @@ const MONTH_LETTERS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D
 export function DashboardPage() {
   const setRoute = useAppStore((s) => s.setRoute);
   const openClient = useModalStore((s) => s.openClient);
+  const openVoidItem = useModalStore((s) => s.openVoidItem);
   const fc = useFormatMoney();
   const today = todayISO();
   const year = new Date().getFullYear();
@@ -45,10 +47,16 @@ export function DashboardPage() {
     [`${year}%`],
   );
 
-  const totalIncome = todaySales.reduce((s, x) => s + x.final_total, 0);
+  // Active line items drive the breakdown; voided/returned ones are excluded
+  // from breakdown + income and shown only as a small awareness note.
+  const activeItems = todayItems.filter(isActiveSaleItem);
+  const adjustments = todayItems.filter((i) => !isActiveSaleItem(i));
+  const grossIncome = todaySales.reduce((s, x) => s + x.final_total, 0);
+  const returnsTotal = adjustments.reduce((s, i) => s + i.total, 0);
+  const netIncome = grossIncome - returnsTotal;
+
   const activeM = allMemberships.filter((m) => membershipStatus(m) === 'active').length;
   const expiringList = allMemberships.filter((m) => membershipStatus(m) === 'expiring');
-  const byProduct = groupItems(todayItems, 'product_name');
 
   const monthlyTotals = MONTH_LETTERS.map((_, i) => {
     const prefix = `${year}-${String(i + 1).padStart(2, '0')}`;
@@ -90,7 +98,13 @@ export function DashboardPage() {
       </div>
 
       <div className="grid g4" style={{ marginBottom: 14 }}>
-        <StatCard color="g" label="Today's Income" value={fc(totalIncome)} valueStyle={{ fontSize: 22 }} sub={`${todaySales.length} sale(s) today`} />
+        <StatCard
+          color="g"
+          label="Today's Income"
+          value={fc(netIncome)}
+          valueStyle={{ fontSize: 22 }}
+          sub={`${todaySales.length} sale(s)${returnsTotal > 0 ? ` · −${fc(returnsTotal)} returned` : ''}`}
+        />
         <StatCard color="b" label="Visits Today" value={todayVisits.length} sub="check-ins" />
         <StatCard color="c" label="Active Members" value={activeM} sub={`${expiringList.length} expiring soon`} />
         <StatCard color="a" label="Total Clients" value={totalClients} sub="registered" />
@@ -100,7 +114,7 @@ export function DashboardPage() {
         <div className="card">
           <div className="card-title">Today's Sales Breakdown</div>
           <div className="tbl-wrap">
-            {Object.keys(byProduct).length ? (
+            {activeItems.length ? (
               <table>
                 <thead>
                   <tr>
@@ -108,26 +122,39 @@ export function DashboardPage() {
                     <th>Category</th>
                     <th>Qty</th>
                     <th>Revenue</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(byProduct).map(([name, d]) => {
-                    const cat = todayItems.find((i) => i.product_name === name)?.category ?? '';
-                    return (
-                      <tr key={name}>
-                        <td className="td-name">{name}</td>
-                        <td>{cat}</td>
-                        <td>{d.qty}</td>
-                        <td style={{ color: 'var(--green)', fontWeight: 600 }}>{fc(d.total)}</td>
-                      </tr>
-                    );
-                  })}
+                  {activeItems.map((i) => (
+                    <tr key={i.id}>
+                      <td className="td-name">{i.product_name}</td>
+                      <td>{i.category}</td>
+                      <td>{i.qty}</td>
+                      <td style={{ color: 'var(--green)', fontWeight: 600 }}>{fc(i.total)}</td>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          title="Return / void this item"
+                          onClick={() => openVoidItem(i.id)}
+                        >
+                          🗑
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             ) : (
               <EmptyState icon="💳">No sales yet today</EmptyState>
             )}
           </div>
+          {adjustments.length > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10 }}>
+              {adjustments.length} item(s) returned/voided today (−{fc(returnsTotal)}) — see Reports for details.
+            </div>
+          )}
         </div>
 
         <div className="card">

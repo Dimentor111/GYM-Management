@@ -21,6 +21,7 @@ import { PlanModal } from '../../pages/modals/PlanModal';
 import { StaffModal } from '../../pages/modals/StaffModal';
 import { RestockModal } from '../../pages/modals/RestockModal';
 import { MembershipModal } from '../../pages/modals/MembershipModal';
+import { VoidSaleItemModal } from '../../pages/modals/VoidSaleItemModal';
 
 const PAGES: Record<Route, ComponentType> = {
   dashboard: DashboardPage,
@@ -68,6 +69,7 @@ export function AppShell() {
       <StaffModal />
       <RestockModal />
       <MembershipModal />
+      <VoidSaleItemModal />
     </div>
   );
 }

@@ -12,6 +12,7 @@
 import initSqlJs, { type Database, type SqlJsStatic, type SqlValue } from 'sql.js';
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { SCHEMA } from './schema';
+import { runMigrations } from './migrations';
 
 const DBK = 'gympro_db';
 
@@ -61,6 +62,7 @@ export async function initDB(): Promise<void> {
     db = new SQL.Database();
   }
   db.run(SCHEMA);
+  runMigrations(db);
   persist();
 }
 
@@ -143,6 +145,7 @@ export function importDatabase(bytes: Uint8Array): void {
   if (!SQL) throw new Error('SQL engine not ready');
   db = new SQL.Database(bytes);
   db.run(SCHEMA);
+  runMigrations(db);
   persist();
   notify();
 }

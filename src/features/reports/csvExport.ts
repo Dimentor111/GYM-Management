@@ -15,19 +15,48 @@ interface CsvRow {
   final_total: number;
   payment_method: string;
   staff_name: string | null;
+  item_status: string | null;
+  delete_reason: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  returned_to_stock: number | null;
+}
+
+/** Escape a value for CSV (wrap in quotes, double embedded quotes). */
+function csv(value: string | null | undefined): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
 
 export function exportSalesCSV(): void {
   const rows = query<CsvRow>(
-    `SELECT s.sale_date,s.sale_time,s.client_name,si.product_name,si.category,si.qty,si.unit_price,si.total,s.discount,s.final_total,s.payment_method,s.staff_name
+    `SELECT s.sale_date,s.sale_time,s.client_name,si.product_name,si.category,si.qty,si.unit_price,si.total,s.discount,s.final_total,s.payment_method,s.staff_name,
+            si.status AS item_status, si.delete_reason, si.deleted_at, si.deleted_by, si.returned_to_stock
      FROM sales s LEFT JOIN sale_items si ON s.id=si.sale_id
      WHERE s.status='completed' ORDER BY s.created_at DESC`,
   );
-  const header = 'Date,Time,Client,Product,Category,Qty,Unit Price,Item Total,Discount,Sale Total,Payment,Staff\n';
+  const header =
+    'Date,Time,Client,Product,Category,Qty,Unit Price,Item Total,Discount,Sale Total,Payment,Staff,Item Status,Reason,Deleted At,Deleted By,Returned To Stock\n';
   const body = rows
-    .map(
-      (r) =>
-        `"${r.sale_date}","${r.sale_time}","${r.client_name || 'Guest'}","${r.product_name || ''}","${r.category || ''}",${r.qty || ''},${r.unit_price || ''},${r.total || ''},${r.discount || 0},${r.final_total},"${r.payment_method}","${r.staff_name || ''}"`,
+    .map((r) =>
+      [
+        csv(r.sale_date),
+        csv(r.sale_time),
+        csv(r.client_name || 'Guest'),
+        csv(r.product_name),
+        csv(r.category),
+        r.qty ?? '',
+        r.unit_price ?? '',
+        r.total ?? '',
+        r.discount || 0,
+        r.final_total,
+        csv(r.payment_method),
+        csv(r.staff_name),
+        csv(r.item_status || 'active'),
+        csv(r.delete_reason),
+        csv(r.deleted_at),
+        csv(r.deleted_by),
+        r.returned_to_stock ? 'Yes' : 'No',
+      ].join(','),
     )
     .join('\n');
 

@@ -134,6 +134,11 @@ export interface Sale {
   created_at: string | null;
 }
 
+/** Line-item lifecycle: sold and counting (`active`), cancelled (`voided`) or
+ * given back by the client (`returned`). Voided/returned items stay in the DB
+ * for audit and are excluded from active income/breakdown totals. */
+export type SaleItemStatus = 'active' | 'voided' | 'returned';
+
 export interface SaleItem {
   id: ID;
   sale_id: ID;
@@ -145,6 +150,16 @@ export interface SaleItem {
   total: number;
   item_type: 'plan' | 'product';
   ref_id: ID;
+  /** Defaults to 'active'. May be null on very old rows before migration. */
+  status: SaleItemStatus | null;
+  /** ISO timestamp of the void/return. */
+  deleted_at: string | null;
+  /** Name of the staff member who performed the void/return. */
+  deleted_by: string | null;
+  /** Required reason/note captured at void/return time. */
+  delete_reason: string | null;
+  /** 1 when a returned product was put back into inventory. */
+  returned_to_stock: Bool | null;
 }
 
 export interface Visit {
